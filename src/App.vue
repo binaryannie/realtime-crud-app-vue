@@ -104,17 +104,26 @@ export default {
   },
   methods: {
     onSubmit () {
-      if (this.updating) {
-        this.onUpdate();
-        return;
-      }
-      this.books.push(this.book);
-      this.book = {
-        title: '',
-        year: '',
-        author: '',
-        read: false
-      };
+      const recordName = this.book.id || 'book/' + this.ds.getUid();
+
+      this.ds.record.has(recordName, (err, has) => {
+        if(has) {
+          this.onUpdate();
+          return;
+        } else {
+          const bookRecord = this.ds.record.getRecord(recordName);
+          bookRecord.set(this.book);
+
+          this.books$$.addEntry(recordName);
+
+          this.book = {
+            title: '',
+            year: '',
+            author: '',
+            read: false
+          };
+        }
+      })
     },
     onEdit (index) {
       this.updating = true;
@@ -122,7 +131,7 @@ export default {
       this.book = this.books[index];
     },
     onDelete (index) {
-      this.books.splice(index, 1);
+      this.books$$.removeEntry(this.books[index].id);
     },
     onUpdate () {
       const recordName = this.books[this.updateIndex].id;
