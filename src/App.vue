@@ -107,9 +107,11 @@ export default {
       const recordName = this.book.id || 'book/' + this.ds.getUid();
 
       this.ds.record.has(recordName, (err, has) => {
-        if(has) {
-          this.onUpdate();
+        if (err) {
           return;
+        }
+        if (has) {
+          this.onUpdate();
         } else {
           const bookRecord = this.ds.record.getRecord(recordName);
           bookRecord.set(this.book);
@@ -123,7 +125,7 @@ export default {
             read: false
           };
         }
-      })
+      });
     },
     onEdit (index) {
       this.updating = true;
