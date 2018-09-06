@@ -44,9 +44,9 @@
               <td>{{ a.artist }}</td>
               <!-- <td v-if="a.read">✓</td> -->
               <!-- <td v-else> </td> -->
-              <td v-on:click.prevent="onEdit(index)">
-                <a class="btn btn-sm btn-primary">✎</a>
-                <a class="btn btn-sm btn-danger">✗</a>
+              <td>
+                <a v-on:click.prevent="onEdit(index)" class="btn btn-sm btn-primary">✎</a>
+                <a v-on:click.prevent="onDelete(index)" class="btn btn-sm btn-danger">✗</a>
               </td>
             </tr>
           </tbody>
