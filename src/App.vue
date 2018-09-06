@@ -1,50 +1,64 @@
 <template>
-  <div id="app">
+  <div id="app" class="text-center container-fluid">
     <h1> {{ title }} </h1>
-    <h3>New Book</h3>
-    <form v-on:submit.prevent="onSubmit">
-      <div>
-        <input name="title" type="text" placeholder="title" v-model="book.title" />
+    <h3>New Album</h3>
+    <form v-on:submit.prevent="onSubmit" class="form">
+      <div class="row justify-content-center">
+        <div class="col-md-4 col-sm-6">
+          <div class="form-group">
+            <input name="title" type="text" class="form-control" placeholder="title" v-model="album.title" />
+          </div>
+          <div class="form-group">
+            <input name="year" type="text" class="form-control" placeholder="year" v-model="album.year" />
+          </div>
+          <div class="form-group">
+            <input name="artist" type="text" class="form-control" placeholder="artist" v-model="album.artist" />
+          </div>
+        </div>
       </div>
-      <div>
-        <input name="year" type="text" placeholder="year" v-model="book.year" />
-      </div>
-      <div>
-        <input name="author" type="text" placeholder="author" v-model="book.author" />
-      </div>
-      <div>
+      <!-- <div>
         <label for="read">Read?</label>
-        <input type="checkbox" v-model="book.read" id="read" name="read" />
-      </div>
-      <button v-if="updating">Update</button>
-      <button v-else>Add</button>
+        <input type="checkbox" v-model="album.read" id="read" name="read" />
+      </div> -->
+      <button class="btn btn-primary" v-if="updating">Update</button>
+      <button class="btn btn-primary" v-else>Add</button>
     </form>
-
-    <h3>All Books</h3>
-    <table>
-      <tr>
-        <th>Title</th>
-        <th>Year</th>
-        <th>Author</th>
-        <th>Read</th>
-        <td>Update</td>
-        <td>Delete</td>
-      </tr>
-      <tr v-for="(b, index) in books" :key="b.title">
-        <td>{{ b.title }}</td>
-        <td>{{ b.year }}</td>
-        <td>{{ b.author }}</td>
-        <td v-if="b.read">✓</td>
-        <td v-else> </td>
-        <td v-on:click.prevent="onEdit(index)"><a>✎</a></td>
-        <td v-on:click.prevent="onDelete(index)"><a>✗</a></td>
-      </tr>
-    </table>
+    <hr>
+    <h3>All Albums</h3>
+    <div class="row justify-content-center">
+      <div class="col-md-10">
+        <table class="table table-dark table-sm table-hover">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Year</th>
+              <th>Artist</th>
+              <!-- <th>Read</th> -->
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(a, index) in albums" :key="a.title">
+              <td>{{ a.title }}</td>
+              <td>{{ a.year }}</td>
+              <td>{{ a.artist }}</td>
+              <!-- <td v-if="a.read">✓</td> -->
+              <!-- <td v-else> </td> -->
+              <td v-on:click.prevent="onEdit(index)">
+                <a class="btn btn-sm btn-primary">✎</a>
+                <a class="btn btn-sm btn-danger">✗</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 
+import './assets/main.css';
 import * as ds from 'deepstream.io-client-js';
 
 export default {
@@ -52,16 +66,15 @@ export default {
   data () {
     return {
       ds: ds('localhost:6020'),
-      books$$: null,
-      title: 'My Books Manager',
+      albums$$: null,
+      title: 'My Albums Manager',
       updating: false,
       updateIndex: 0,
-      books: [],
-      book: {
+      albums: [],
+      album: {
         title: '',
         year: '',
-        author: '',
-        read: false
+        artist: ''
       }
     };
   },
@@ -70,19 +83,26 @@ export default {
       console.log('logged in');
     });
 
-    this.books$$ = this.ds.record.getList('books');
+    this.albums$$ = this.ds.record.getList('albums');
+    this.albums$$.whenReady((list) => {
+      list.getEntries().forEach(entry => {
+        this.ds.record.getRecord(entry).whenReady(album => {
+          this.albums.push(album.get());
+        });
+      });
+    });
 
     // Entry added
-    this.books$$.on('entry-added', (recordName, index) => {
+    this.albums$$.on('entry-added', (recordName, index) => {
       this.ds.record.getRecord(recordName).whenReady(record => {
         record.subscribe(data => {
           if (!data.id) {
             if (data.title) {
               data.id = record.name;
-              this.books.push(data);
+              this.albums.push(data);
             }
           } else {
-            this.books = this.books.map(b => {
+            this.albums = this.albums.map(b => {
               if (data.id === b.id) {
                 b = data;
               }
@@ -94,17 +114,17 @@ export default {
       });
     });
 
-    this.books$$.on('entry-removed', (recordName, index) => {
+    this.albums$$.on('entry-removed', (recordName, index) => {
       this.ds.record.getRecord(recordName).whenReady(record => {
         record.subscribe(data => {
-          this.books.splice(this.books.indexOf(data, 1));
+          this.albums.splice(this.albums.indexOf(data, 1));
         }, true);
       });
     });
   },
   methods: {
     onSubmit () {
-      const recordName = this.book.id || 'book/' + this.ds.getUid();
+      const recordName = this.album.id || 'album/' + this.ds.getUid();
 
       this.ds.record.has(recordName, (err, has) => {
         if (err) {
@@ -113,16 +133,15 @@ export default {
         if (has) {
           this.onUpdate();
         } else {
-          const bookRecord = this.ds.record.getRecord(recordName);
-          bookRecord.set(this.book);
+          const albumRecord = this.ds.record.getRecord(recordName);
+          albumRecord.set(this.album);
 
-          this.books$$.addEntry(recordName);
+          this.albums$$.addEntry(recordName);
 
-          this.book = {
+          this.album = {
             title: '',
             year: '',
-            author: '',
-            read: false
+            artist: ''
           };
         }
       });
@@ -130,19 +149,19 @@ export default {
     onEdit (index) {
       this.updating = true;
       this.updateIndex = index;
-      this.book = this.books[index];
+      this.album = this.albums[index];
     },
     onDelete (index) {
-      this.books$$.removeEntry(this.books[index].id);
+      this.albums$$.removeEntry(this.albums[index].id);
     },
     onUpdate () {
-      const recordName = this.books[this.updateIndex].id;
-      const bookRecord = this.ds.record.getRecord(recordName);
-      bookRecord.set(this.book);
-      this.book = {
+      const recordName = this.albums[this.updateIndex].id;
+      const albumRecord = this.ds.record.getRecord(recordName);
+      albumRecord.set(this.album);
+      this.album = {
         title: '',
         year: '',
-        author: '',
+        artist: '',
         read: false
       };
       this.updating = false;
@@ -152,44 +171,4 @@ export default {
 </script>
 
 <style>
-#app {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px auto 0;
-}
-h1, h2 {
-  font-weight: normal;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-a {
-  color: #42b983;
-}
-table {
-  margin: 0 auto;
-}
-td {
-  padding: 0.1em 0.9em;
-}
-form > div {
-  margin-bottom: 0.5em;
-}
-input {
-  padding: 0.25em;
-}
-button {
-  padding: 0.25em 1em;
-  background-color: rgb(47, 109, 145);
-  color: white;
-  border: 1px solid rgb(47, 109, 145);
-}
 </style>
